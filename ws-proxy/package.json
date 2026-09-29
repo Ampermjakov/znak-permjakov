@@ -1,0 +1,12 @@
+{
+  "name": "znak-ws-proxy",
+  "version": "1.0.0",
+  "description": "Внутренний HTTP-мост к неофициальному Socket.IO поиску searchplatform.rospatent.gov.ru (товарные знаки)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}
