@@ -446,8 +446,8 @@
                 onMounted(() => {
                     loadAuthUser();
                     const params = new URLSearchParams(location.search);
-                    const tz = (params.get('tz') || '').trim();
-                    if (tz && /^\d{4,15}$/.test(tz)) {
+                    const tz = (params.get('q') || params.get('tz') || '').trim();
+                    if (tz) {
                         query.value = tz;
                         doSearch(1);
                     }
