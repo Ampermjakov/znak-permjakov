@@ -42,7 +42,13 @@ if ($ageHours !== false && $ageHours < REFRESH_COOLDOWN_HOURS) {
     out(['error' => "Эту карточку уже обновляли недавно. Следующее обновление доступно через {$wait} ч."], 429);
 }
 
-$data = rospatentSearch($regNumber, 1, 1);
+// Роспатент ищет по номеру ЗАЯВКИ, а не регистрации: по рег.номеру свободный поиск
+// отдаёт 0 результатов. Берём appl_number из локальной записи и ищем по нему.
+$local = findLocalByNumber($regNumber);
+$applNumber = trim((string) ($local['appl_number'] ?? ''));
+$query = $applNumber !== '' ? $applNumber : $regNumber;
+
+$data = rospatentSearch($query, 1, 5);
 
 if (!empty($data['quota_exceeded'])) {
     out(['error' => $data['error']], 503);
@@ -53,7 +59,9 @@ if (isset($data['error'])) {
 
 $item = null;
 foreach ($data['data'] ?? [] as $candidate) {
-    if (($candidate['reg_number'] ?? null) === $regNumber) { $item = $candidate; break; }
+    $rn = $candidate['reg_number'] ?? null;
+    $an = $candidate['appl_number'] ?? null;
+    if ($rn === $regNumber || ($applNumber !== '' && $an === $applNumber)) { $item = $candidate; break; }
 }
 
 if (!$item) {
