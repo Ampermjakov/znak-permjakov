@@ -1,4 +1,5 @@
 <?php
+require_once '/var/www/fastuser/data/telegram-relay.php';
 // Telegram Bot Webhook — Проверка товарных знаков
 // Размести рядом с search.php. Вебхук ставится через сервер 45.88.106.54
 // (Telegram заблокирован в РФ, трафик бота идёт через него), как и у chek.permjakov.ru.
@@ -23,7 +24,7 @@ if (!$chatId) exit;
 function sendMessage($chatId, $text) {
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL => TG_API . '/sendMessage',
+        CURLOPT_URL => tg_relay_url('sendMessage', TG_TOKEN),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => json_encode([
@@ -32,7 +33,7 @@ function sendMessage($chatId, $text) {
             'parse_mode' => 'Markdown',
             'disable_web_page_preview' => true,
         ]),
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Relay-Secret: ' . TG_RELAY_SECRET],
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_TIMEOUT => 10,
     ]);
@@ -43,7 +44,7 @@ function sendMessage($chatId, $text) {
 function sendPhoto($chatId, $photoUrl, $caption) {
     $ch = curl_init();
     curl_setopt_array($ch, [
-        CURLOPT_URL => TG_API . '/sendPhoto',
+        CURLOPT_URL => tg_relay_url('sendPhoto', TG_TOKEN),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => json_encode([
@@ -52,7 +53,7 @@ function sendPhoto($chatId, $photoUrl, $caption) {
             'caption' => $caption,
             'parse_mode' => 'Markdown',
         ]),
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Relay-Secret: ' . TG_RELAY_SECRET],
         CURLOPT_SSL_VERIFYPEER => false,
         CURLOPT_TIMEOUT => 15,
     ]);
