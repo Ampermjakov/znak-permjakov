@@ -443,14 +443,17 @@ function enrichQuotaIncrement(): void
 // 10 самых свежих регистраций по дате регистрации из открытого реестра (CSV,
 // import.php). Индекс idx_registration_date — запрос читает 10 строк, а не
 // весь реестр (~1,2 млн). Название знака есть только у обогащённых карточек
-// (trademark_cache) — подтягиваем, если есть. Имя правообладателя-гражданина
-// (ИНН из 12 цифр) на главной не выводим — только «Физическое лицо / ИП».
+// (trademark_cache) — подтягиваем, если есть. Имя правообладателя на главной
+// выводим только у организаций (ИНН из 10 цифр, ОГРН из 13 или иностранная
+// компания с кодом страны); граждане и ИП в CSV идут без ИНН/ОГРН или с ИНН
+// из 12 цифр — у них вместо ФИО «Физическое лицо / ИП».
 function getRecentTrademarks(int $limit = 10): array
 {
     $pdo = dbConnect();
     if (!$pdo) return [];
 
     $st = $pdo->prepare('SELECT r.registration_number, r.registration_date, r.right_holder_name, r.right_holder_inn,
+            r.right_holder_ogrn, r.right_holder_country_code,
             (SELECT c.mark_description_text FROM trademark_cache c WHERE c.reg_number = r.registration_number LIMIT 1) AS mark_name
         FROM trademark_registry r
         WHERE r.registration_date IS NOT NULL
@@ -462,12 +465,15 @@ function getRecentTrademarks(int $limit = 10): array
 
     $items = [];
     foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $isPerson = preg_match('/^\d{12}$/', (string)$row['right_holder_inn']) === 1;
+        $country = strtoupper(trim((string)$row['right_holder_country_code']));
+        $isOrg = preg_match('/^\d{10}$/', trim((string)$row['right_holder_inn'])) === 1
+            || preg_match('/^\d{13}$/', trim((string)$row['right_holder_ogrn'])) === 1
+            || ($country !== '' && $country !== 'RU');
         $items[] = [
             'reg_number' => $row['registration_number'],
             'reg_date'   => $row['registration_date'],
             'name'       => trim((string)$row['mark_name']),
-            'holder'     => $isPerson ? 'Физическое лицо / ИП' : trim((string)$row['right_holder_name']),
+            'holder'     => $isOrg ? trim((string)$row['right_holder_name']) : 'Физическое лицо / ИП',
         ];
     }
     return $items;
