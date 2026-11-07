@@ -1,3 +1,14 @@
+<?php
+// Блок «Последние зарегистрированные» — из своего реестра (CSV Роспатента),
+// без живых запросов. Нет БД — блок просто не выводится.
+$recentTm = [];
+try {
+    require_once __DIR__ . '/lib/db.php';
+    $recentTm = getRecentTrademarks(10);
+} catch (Throwable $e) {
+    $recentTm = [];
+}
+?>
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -272,6 +283,24 @@
                 </div>
 
             </template>
+
+            <?php if ($recentTm): ?>
+                <div class="card recent-card ad-3" v-pre>
+                    <div class="recent-hdr">
+                        <h2 class="recent-title">Последние зарегистрированные знаки</h2>
+                        <span class="recent-sub">10 последних записей</span>
+                    </div>
+                    <?php foreach ($recentTm as $tm): ?>
+                        <div class="recent-row">
+                            <div class="recent-main">
+                                <a class="recent-site" href="/?tz=<?= rawurlencode($tm['reg_number']) ?>">№ <?= htmlspecialchars($tm['reg_number']) ?><?= $tm['name'] !== '' ? ' — ' . htmlspecialchars($tm['name']) : '' ?></a>
+                                <span class="recent-sign"><?= htmlspecialchars($tm['holder'] !== '' ? $tm['holder'] : 'Правообладатель не указан') ?></span>
+                            </div>
+                            <span class="recent-date"><?= htmlspecialchars(date('d.m.Y', strtotime($tm['reg_date']))) ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
 
             <footer class="footer">
                 <p>© <a href="https://permjakov.ru">permjakov.ru</a></p>

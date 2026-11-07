@@ -107,6 +107,8 @@ function dbConnect(): ?PDO
             KEY `idx_application_number` (`application_number`),
             KEY `idx_actual` (`actual`),
             KEY `idx_enrich` (`actual`, `enrich_status`),
+            KEY `idx_right_holder_inn` (`right_holder_inn`),
+            KEY `idx_registration_date` (`registration_date`),
             FULLTEXT KEY `ft_holder` (`right_holder_name`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
@@ -435,6 +437,40 @@ function enrichQuotaIncrement(): void
     if (!$pdo) return;
     $pdo->exec('INSERT INTO enrich_quota (usage_date, requests_used) VALUES (CURDATE(), 1)
         ON DUPLICATE KEY UPDATE requests_used = requests_used + 1');
+}
+
+// ── index.php: блок «Последние зарегистрированные знаки» ───────────────
+// 10 самых свежих регистраций по дате регистрации из открытого реестра (CSV,
+// import.php). Индекс idx_registration_date — запрос читает 10 строк, а не
+// весь реестр (~1,2 млн). Название знака есть только у обогащённых карточек
+// (trademark_cache) — подтягиваем, если есть. Имя правообладателя-гражданина
+// (ИНН из 12 цифр) на главной не выводим — только «Физическое лицо / ИП».
+function getRecentTrademarks(int $limit = 10): array
+{
+    $pdo = dbConnect();
+    if (!$pdo) return [];
+
+    $st = $pdo->prepare('SELECT r.registration_number, r.registration_date, r.right_holder_name, r.right_holder_inn,
+            (SELECT c.mark_description_text FROM trademark_cache c WHERE c.reg_number = r.registration_number LIMIT 1) AS mark_name
+        FROM trademark_registry r
+        WHERE r.registration_date IS NOT NULL
+        ORDER BY r.registration_date DESC, r.registration_number DESC
+        LIMIT ?');
+    if (!$st) return [];
+    $st->bindValue(1, $limit, PDO::PARAM_INT);
+    if (!$st->execute()) return [];
+
+    $items = [];
+    foreach ($st->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $isPerson = preg_match('/^\d{12}$/', (string)$row['right_holder_inn']) === 1;
+        $items[] = [
+            'reg_number' => $row['registration_number'],
+            'reg_date'   => $row['registration_date'],
+            'name'       => trim((string)$row['mark_name']),
+            'holder'     => $isPerson ? 'Физическое лицо / ИП' : trim((string)$row['right_holder_name']),
+        ];
+    }
+    return $items;
 }
 
 // ── search.php: локальный поиск перед живым запросом ───────────────────

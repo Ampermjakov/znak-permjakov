@@ -22,12 +22,6 @@ function out(string $msg): void
     echo '[' . date('Y-m-d H:i:s') . '] ' . $msg . "\n";
 }
 
-$pdo = dbConnect();
-if (!$pdo) {
-    out('Нет соединения с БД, прерываю.');
-    exit(1);
-}
-
 // ── 1. Находим актуальную ссылку на CSV ──────────────────────────────
 // rospatent.gov.ru не досылает промежуточный сертификат в цепочке (недонастройка
 // на их стороне — SSL verify: "unable to verify the first certificate"), из-за чего
@@ -70,7 +64,24 @@ if (!file_exists($tmpFile) || filesize($tmpFile) < 1000000) {
     out('Файл уже скачан сегодня, использую его: ' . $tmpFile);
 }
 
+// Старые недокачанные/необработанные файлы прошлых дней — убираем, чтобы не
+// копились во /tmp (по 670+ МБ каждый).
+foreach (glob(sys_get_temp_dir() . '/rospatent_tm_*.csv') ?: [] as $old) {
+    if ($old !== $tmpFile) @unlink($old);
+}
+
 // ── 3. Стримовый парсинг + пакетный upsert ───────────────────────────
+// Соединение с БД открываем только ПОСЛЕ скачивания: у MariaDB на сервере
+// wait_timeout = 10 с, а скачивание идёт ~30–40 с — соединение, открытое
+// заранее, сервер успевал закрыть, транзакция не начиналась, и первый же
+// commit() падал с «There is no active transaction» (импорт стоял с 05.11.2026).
+$pdo = dbConnect();
+if (!$pdo) {
+    out('Нет соединения с БД, прерываю.');
+    exit(1);
+}
+$pdo->exec('SET SESSION wait_timeout = 28800');
+
 $logId = startImportLog($csvUrl);
 
 $handle = fopen($tmpFile, 'r');
