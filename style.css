@@ -523,7 +523,7 @@ a.recent-site:hover { color:#fda4af; }
 .tm-links a:hover { text-decoration:underline; }
 
 /* Responsive */
-@media (max-width: 1100px) { .nav-tools{display:none} .nav-burger{display:flex} }
+@media (max-width: 1240px) { .nav-tools{display:none} .nav-burger{display:flex} }
 @media (max-width:640px) {
     .header { padding:48px 0 36px; }
     .card { padding:20px; }
