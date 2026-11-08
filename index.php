@@ -18,7 +18,7 @@ try {
     <title>Проверка товарного знака — Реестр Роспатента | permjakov.ru</title>
     <meta name="description" content="Проверка товарного знака по номеру свидетельства, названию или правообладателю. Статус, классы МКТУ, изображение знака — по данным открытого реестра Роспатента.">
     <link rel="icon" href="https://permjakov.ru/amper.svg" type="image/x-icon">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>">
 </head>
 
 <body>
